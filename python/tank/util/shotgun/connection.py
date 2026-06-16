@@ -445,12 +445,21 @@ def create_sg_connection(user="default"):
             api_key=config_data["api_key"],
             http_proxy=config_data.get("http_proxy"),
             connect=False,
+            timeout_secs=120,
         )
 
     else:
         # Otherwise use the authenticated user to create the connection.
         log.debug("Creating PTR connection from %r..." % sg_user)
         api_handle = sg_user.create_sg_connection()
+
+    # Set a default timeout on API calls to prevent indefinite blocking.
+    # The vendored shotgun_api3 defaults to None (no timeout), which can
+    # cause the main thread to hang forever if the connection stalls.
+    # A 120s timeout gives enough headroom for legitimate slow queries
+    # while preventing the 15-minute freezes seen on Linux/X11.
+    if api_handle.config.timeout_secs is None:
+        api_handle.config.timeout_secs = 120
 
     # bolt on our custom user agent manager so that we can
     # send basic version metrics back via http headers.

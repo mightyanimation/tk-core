@@ -1615,10 +1615,19 @@ class Engine(TankBundle):
 
         :return: QT Parent window (:class:`PySide.QtGui.QWidget`)
         """
-        # By default, this will return the QApplication's active window:
+        # By default, this will return the QApplication's active window.
+        # On X11, QApplication.activeWindow() performs a synchronous
+        # _NET_ACTIVE_WINDOW property query via XGetWindowProperty. If
+        # the X11 connection is stalled (e.g. from a compositor sync
+        # issue), this can block indefinitely. Catch any failure and
+        # fall back to no parent -- the dialog will still work correctly
+        # as a standalone window.
         from .qt import QtGui
 
-        return QtGui.QApplication.activeWindow()
+        try:
+            return QtGui.QApplication.activeWindow()
+        except Exception:
+            return None
 
     def _create_dialog(self, title, bundle, widget, parent):
         """
